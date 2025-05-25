@@ -24,7 +24,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
-//import androidx.appcompat.widget.AppCompatImageView;
 import android.util.DisplayMetrics;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -158,6 +157,7 @@ class PitchAnimation {
     private float octaveY;
     private Rect noteBounds = new Rect();
 
+    private double detectedPitch;
     /**
      * The angle of the dot indicating how close the detected pitch is to the nearest musical note.
      * A value of 0 positions the dot at the far right. A value of PI/2 positions the dot at the
@@ -176,6 +176,7 @@ class PitchAnimation {
     }
 
     private void setPitch(double detectedPitch) {
+      this.detectedPitch = detectedPitch;
       int level = pitchToLevel(detectedPitch);
       if (level != this.level) {
         this.level = level;
@@ -264,17 +265,19 @@ class PitchAnimation {
         canvas.drawText(musicalNote.octave, octaveX, octaveY, paintForOctave);
       }
 
-      // Calculate the location of the red dot. The red dot will be a point on the invisible
-      // ellipse.
-      float xDot = (float) (animationCenterX + ellipseRadius * Math.cos(angleOfDot));
-      float yDot = (float) (animationCenterY - ellipseRadius * Math.sin(angleOfDot));
-      if (angleOfDot == ANGLE_TOP) {
-        // Because the drawable is an even number of pixels wide, the top circle is offset slightly
-        // to the right. This fixes the issue where there was a white sliver on the right edge of
-        // the red dot.
-        xDot += angleTopOffset;
+      if (this.detectedPitch != 0) {
+        // Calculate the location of the red dot. The red dot will be a point on the invisible
+        // ellipse.
+        float xDot = (float) (animationCenterX + ellipseRadius * Math.cos(angleOfDot));
+        float yDot = (float) (animationCenterY - ellipseRadius * Math.sin(angleOfDot));
+        if (angleOfDot == ANGLE_TOP) {
+          // Because the drawable is an even number of pixels wide, the top circle is offset slightly
+          // to the right. This fixes the issue where there was a white sliver on the right edge of
+          // the red dot.
+          xDot += angleTopOffset;
+        }
+        canvas.drawCircle(xDot, yDot, dotRadius, paintForDot);
       }
-      canvas.drawCircle(xDot, yDot, dotRadius, paintForDot);
     }
   }
 
