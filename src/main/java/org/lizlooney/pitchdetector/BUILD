@@ -2,11 +2,11 @@
 android_binary(
     name = "app",
     manifest = "AndroidManifest.xml",
-    deps = [":pitch_detector_activity"],
+    deps = [":pitchdetector"],
 )
 
 android_library(
-    name = "pitch_detector_activity",
+    name = "pitchdetector",
     srcs = glob(["*.java"]),
     deps = [
         "//src/main/java/org/lizlooney/pitchdetector/audio:audio",
