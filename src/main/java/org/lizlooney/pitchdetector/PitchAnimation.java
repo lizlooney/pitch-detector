@@ -102,6 +102,7 @@ class PitchAnimation {
   private static final List<MusicalNote> musicalNotes = new ArrayList<>();
 
   private final Paint paintForDot;
+  private final Paint paintForFadingDot;
   private final Paint paintForShade;
   private final Paint paintForNoteLeft;
   private final Paint paintForNoteRight;
@@ -111,6 +112,8 @@ class PitchAnimation {
   PitchAnimation() {
     paintForDot = new Paint();
     paintForDot.setColor(Color.RED);
+    paintForFadingDot = new Paint();
+    paintForFadingDot.setColor(Color.RED);
 
     paintForShade = new Paint();
     paintForShade.setColor(makeShadeColor(0));
@@ -156,8 +159,9 @@ class PitchAnimation {
     private float octaveX;
     private float octaveY;
     private Rect noteBounds = new Rect();
+    private double lastDetectedPitch;
+    private long timeMillisWhenPitchWasLost;
 
-    private double detectedPitch;
     /**
      * The angle of the dot indicating how close the detected pitch is to the nearest musical note.
      * A value of 0 positions the dot at the far right. A value of PI/2 positions the dot at the
@@ -176,15 +180,21 @@ class PitchAnimation {
     }
 
     private void setPitch(double detectedPitch) {
-      this.detectedPitch = detectedPitch;
-      int level = pitchToLevel(detectedPitch);
-      if (level != this.level) {
-        this.level = level;
-        paintForShade.setColor(makeShadeColor(level));
+      if (detectedPitch != 0) {
+        lastDetectedPitch = detectedPitch;
+        timeMillisWhenPitchWasLost = 0;
+
+        int level = pitchToLevel(lastDetectedPitch);
+        if (level != this.level) {
+          this.level = level;
+          paintForShade.setColor(makeShadeColor(level));
+        }
+        double difference = calculateDifference(lastDetectedPitch, level);
+        angleOfDot = (1 - 2 * difference) * (Math.PI / 2);
+        setContentDescription(makeContentDescription(getContext(), level, difference));
+      } else if (timeMillisWhenPitchWasLost == 0) {
+        timeMillisWhenPitchWasLost = System.currentTimeMillis();
       }
-      double difference = calculateDifference(detectedPitch, level);
-      angleOfDot = (1 - 2 * difference) * (Math.PI / 2);
-      setContentDescription(makeContentDescription(getContext(), level, difference));
     }
 
     @Override
@@ -265,7 +275,7 @@ class PitchAnimation {
         canvas.drawText(musicalNote.octave, octaveX, octaveY, paintForOctave);
       }
 
-      if (this.detectedPitch != 0) {
+      if (lastDetectedPitch != 0) {
         // Calculate the location of the red dot. The red dot will be a point on the invisible
         // ellipse.
         float xDot = (float) (animationCenterX + ellipseRadius * Math.cos(angleOfDot));
@@ -276,7 +286,16 @@ class PitchAnimation {
           // the red dot.
           xDot += angleTopOffset;
         }
-        canvas.drawCircle(xDot, yDot, dotRadius, paintForDot);
+
+        if (timeMillisWhenPitchWasLost != 0) {
+          // After pitch is lost, make the dot gradually fade to transparent for 1 second.
+          long millisSincePitchWasLost = System.currentTimeMillis() - timeMillisWhenPitchWasLost;
+          double alpha = Math.max(0, (1000.0 - millisSincePitchWasLost) / 1000.0);
+          paintForFadingDot.setColor(Color.argb((int) (alpha * 255), 255, 64, 64));
+          canvas.drawCircle(xDot, yDot, dotRadius, paintForFadingDot);
+        } else {
+          canvas.drawCircle(xDot, yDot, dotRadius, paintForDot);
+        }
       }
     }
   }
